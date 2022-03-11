@@ -30,7 +30,11 @@ Route::post('/restaurant/update_experience_photo', 'App\Http\Controllers\Restaur
 Route::get('/restaurant/get_experience/{place_id}/{created_by}/{created_at}', 'App\Http\Controllers\RestaurantController@get_experience')->name('experience');
 Route::get('/restaurant/get_experience_by_id/{place_id}/{experience_id}', 'App\Http\Controllers\RestaurantController@get_experience')->name('experience');
 Route::get('/restaurant/get_experience_user/{user_id}', 'App\Http\Controllers\RestaurantController@get_experience_user')->name('experience');
-Route::get('/restaurant/get_experience_restaurant/{place_id}', 'App\Http\Controllers\RestaurantController@get_experience_restaurant')->name('experience');
+
+Route::get('/restaurant/get_user_top_qi/{user_id}/{type}', 'App\Http\Controllers\RestaurantController@get_user_top_qi')->name('experience');
+
+
+Route::get('/restaurant/get_experience_restaurant/{place_id}/{user_id}', 'App\Http\Controllers\RestaurantController@get_experience_restaurant')->name('experience');
 Route::get('/restaurant/get_experience_photo/{experiences_id}', 'App\Http\Controllers\RestaurantController@get_experience_photo')->name('experience');
 Route::get('/restaurant/display_experience_photo/{experiences_photos_id}/{small}', 'App\Http\Controllers\RestaurantController@display_experience_photo')->name('experience');
 Route::middleware('cors')->delete('/restaurant/delete_experience_photo/{experiences_photos_id}', 'App\Http\Controllers\RestaurantController@delete_experience_photo')->name('experience');

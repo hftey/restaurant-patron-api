@@ -82,7 +82,7 @@ class RestaurantController extends Controller
     public function get_qi_ultimate(Request $request){
         return DB::table('experiences')
             ->leftJoin('users','users.id','=','experiences.created_by')
-            ->select('users.username', DB::raw('sum(points) as highest_points'))
+            ->select('users.username', 'users.name', DB::raw('sum(points) as highest_points'))
             ->where('place_id','=',$request->place_id)
             ->groupBy('created_by')
             ->orderBy('highest_points', 'desc')
@@ -99,7 +99,7 @@ class RestaurantController extends Controller
                 ->where('experiences.id', '=',$request->experience_id);
 
         }else{
-            $experience = Experience::where('place_id', '=',$request->place_id)
+            $experience = Experience::where('experiences.place_id', '=',$request->place_id)
                 ->leftJoin('users','users.id','=','experiences.created_by')
                 ->where('experiences.created_by','=', $request->created_by);
             if ($request->created_at != 'null') {
@@ -126,7 +126,7 @@ class RestaurantController extends Controller
 
     public function get_experience_restaurant(Request $request){
 
-        return Experience::where('experiences.place_id', '=',$request->place_id)
+        $experience = Experience::where('experiences.place_id', '=',$request->place_id)
             ->leftJoin("restaurants","restaurants.place_id","=","experiences.place_id")
             ->leftJoin(DB::Raw('(SELECT ANY_VALUE(id) as id, experiences_id FROM experiences_photos group by experiences_id) as experiences_photos'), function($join){
                 $join->on('experiences_photos.experiences_id','=','experiences.id');
@@ -138,10 +138,59 @@ class RestaurantController extends Controller
             ->leftJoin('users','users.id','=','experiences.created_by')
             ->select('restaurants.name', 'restaurants.place_id', 'experiences.id', 'experiences.rating', 'experiences.comment','experiences.points','user_points.total_points',
                 'experiences.updated_at', 'experiences.updated_at', 'experiences_photos.id as experiences_photos_id', 'users.name as creator_name')
-            ->orderby('experiences.created_at','desc')
-            ->get();
+            ->orderby('experiences.created_at','desc');
+
+
+        if ($request->user_id != 'null'){
+            $experience->where('experiences.created_by','=',$request->user_id);
+        }
+
+        return $experience->get();
 
     }
+
+
+    public function get_user_top_qi(Request $request){
+
+
+        if ($request->type == "restaurant"){
+            return Restaurant::leftJoin(DB::Raw('(SELECT place_id, created_by, sum(points) as total_points, max(created_at) as latest_created_at FROM experiences group by created_by, place_id) as restaurant_topqi'), function($join){
+                    $join->on('restaurant_topqi.place_id','=','restaurants.place_id');
+                })
+                ->leftJoin('users','users.id','=','restaurant_topqi.created_by')
+                ->where('restaurant_topqi.created_by','=',$request->user_id)
+                ->select('users.name as creator_name', 'restaurants.name as restaurant_name', 'restaurant_topqi.latest_created_at', 'restaurant_topqi.total_points')
+                ->orderby('restaurant_topqi.total_points','desc')
+                ->limit(5)
+                ->get();
+
+        }else if ($request->type == "local"){
+
+
+            return DB::select(DB::Raw('SELECT users.name as creator_name, restaurant_topcity.city as city_name, restaurant_topcity.latest_created_at, restaurant_topcity.total_points FROM 
+                (SELECT city, restaurant_topqi.created_by, max(created_at) as latest_created_at, sum(total_points) as total_points FROM
+                    (SELECT place_id, created_by, sum(points) as total_points, max(created_at) as latest_created_at FROM experiences group by created_by, place_id) as restaurant_topqi 
+                        LEFT JOIN restaurants ON (restaurants.place_id=restaurant_topqi.place_id) group by restaurant_topqi.created_by, restaurants.city) as restaurant_topcity, 
+                users WHERE users.id=restaurant_topcity.created_by AND restaurant_topcity.created_by='.$request->user_id.' order by restaurant_topcity.total_points desc'));
+
+        }else{
+            return Experience::where('experiences.created_by', '=',$request->user_id)
+                ->leftJoin("restaurants","restaurants.place_id","=","experiences.place_id")
+                ->leftJoin(DB::Raw('(SELECT ANY_VALUE(id) as id, experiences_id FROM experiences_photos group by experiences_id) as experiences_photos'), function($join){
+                    $join->on('experiences_photos.experiences_id','=','experiences.id');
+                })
+                ->leftJoin('users','users.id','=','experiences.created_by')
+                ->select('restaurants.name', 'restaurants.place_id', 'experiences.id', 'experiences.rating', 'experiences.comment','experiences.points',
+                    'experiences.updated_at', 'experiences.updated_at', 'users.name as creator_name')
+                ->orderby('experiences.created_at','desc')
+                ->get();
+
+            return [];
+        }
+
+
+    }
+
 
     public function get_experience_user(Request $request){
 
